@@ -12,6 +12,7 @@ Overall S/W, F/W works in KETI
  4) Beamforming_BD4.c
 
 - Cairo-control (F/W)
-
+ 0) Used CubeMX, Keil uVision5
+ 
 - AD9361 SPI setting program  
   

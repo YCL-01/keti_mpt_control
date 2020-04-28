@@ -1,22 +1,22 @@
 # KETI
 Overall Works in KETI
 - PC programs (OS: Ubuntu 18.04 LTS) 
-1) Control pannel (UI _ PyQt5)
-2) UDP Socket Local Network (NI PXIe-1078 <-> PC <-> Beamforming board) 
-3) I,Q Data FFT calculation
-4) SoC Register R/W
-5) ETC.
+ 1) Control pannel (UI _ PyQt5)
+ 2) UDP Socket Local Network (NI PXIe-1078 <-> PC <-> Beamforming board) 
+ 3) I,Q Data FFT calculation
+ 4) SoC Register R/W
+ 5) etc.
  
- II. SoC S/W (OS: Petalinux)
-  A. UDP Socket Local Network
-  B. Chip control functions
-  C. ETC.
+- SoC S/W (OS: Petalinux)
+ 1) UDP Socket Local Network
+ 2) Chip control functions
+ 3) etc.
   
- III. AD9361 (RF Board SPI setting program) 
-  A. AD9361 Overall setting (Freq, clock, etc.)
-  
- IV.Beacon Generator F/W
-  A. Chip Spi setting
-  B. Etc.
+- AD9361 (RF Board SPI setting program) 
+ 1) AD9361 Overall setting (Freq, clock, etc.)
+
+- Beacon Generator F/W
+ 1) Chip Spi setting
+ 2) etc.
  
   

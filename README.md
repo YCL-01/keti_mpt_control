@@ -3,6 +3,7 @@ Overall S/W, F/W works in KETI
 - PC (OS: Ubuntu 18.04 LTS) 
  1) Control_main.py (User interface)
  2) Zynq_wrapper.py
+ 3) bf_controlbox.ui
  
 - Zynq (OS: Petalinux)
  1) Beamforming_BD1.c

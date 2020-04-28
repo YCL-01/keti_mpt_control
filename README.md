@@ -1,11 +1,11 @@
 # KETI
 Overall Works in KETI
- I. PC programs (OS: Ubuntu 18.04 LTS) 
-  A. Control pannel (UI _ PyQt5)
-  B. UDP Socket Local Network (NI PXIe-1078 <-> PC <-> Beamforming board) 
-  C. I,Q Data FFT calculation
-  D. SoC Register R/W
-  E. ETC.
+- PC programs (OS: Ubuntu 18.04 LTS) 
+1) Control pannel (UI _ PyQt5)
+2) UDP Socket Local Network (NI PXIe-1078 <-> PC <-> Beamforming board) 
+3) I,Q Data FFT calculation
+4) SoC Register R/W
+5) ETC.
  
  II. SoC S/W (OS: Petalinux)
   A. UDP Socket Local Network

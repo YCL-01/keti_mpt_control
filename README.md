@@ -13,6 +13,4 @@ Overall S/W, F/W works in KETI
 
 - Cairo-control (F/W)
  0) Used CubeMX, Keil uVision5
- 
-- AD9361 SPI setting program  
   

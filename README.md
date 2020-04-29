@@ -11,6 +11,5 @@ Overall S/W, F/W works in KETI
  3) Beamforming_BD3.c
  4) Beamforming_BD4.c
 
-- Cairo-control (F/W)
- * Used CubeMX, Keil uVision5
+- Cairo-control (F/W Used CubeMX, Keil uVision5)
   

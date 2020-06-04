@@ -83,7 +83,8 @@ class Zynq:
 					self.line_I.append( tmp[1:] )
 				else:
 					self.line_Q.append( tmp[1:] )	## FFT calibration for Rx cal
-
+	
+	## FFT calculation
 	def FFT_cal(self):
 		for j in range(0,16*self.working_board): #ANT CH 32
 			#Init Variables 

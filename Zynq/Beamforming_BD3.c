@@ -301,7 +301,7 @@ void rx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen)
 		}
 		else
 		{
-			for(i=0; i<6; i++){
+			for(i=0; i<8; i++){
 				printf("slept %d sec\n", i);
 				sleep(1);
 			}
@@ -356,7 +356,7 @@ void rx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen)
 		else if(able_status == 0x0)
 			break;
 	}
-	for(i=0; i<3; i++){
+	for(i=0; i<4; i++){
 		sleep(1);
 		printf("slept for %d sec\n", i+1);
 	}
@@ -437,11 +437,11 @@ void rx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen)
 		}
 		else
 		{
-			for(i=0; i<4; i++){
+			for(i=0; i<8; i++){
 				printf("slept %d sec\n", i);
 				sleep(1);
 			}
-			for(k = 0; k < 6; k++)																			// 4 ARTIX
+			for(k = 0; k < 4; k++)																			// 4 ARTIX
 			{
 				mem_target_temp = mem_target_ARTIX[k];
 				for(j = 0; j < 4; j++)
@@ -548,8 +548,6 @@ void tx_reset()
 
 void retro_activation()
 {
-
-	off_t target_ARTIX[4] = {ARTIX_1_SFR, ARTIX_2_SFR, ARTIX_3_SFR, ARTIX_4_SFR};
 	off_t target_temp;
 	unsigned long able_status = 0;
 	int fd = 0;
@@ -562,20 +560,11 @@ void retro_activation()
 
 	while(1)
 	{
-
-		able_status = read_SFR(fd, target_ARTIX[0]);
+		able_status = read_SFR(fd, ARTIX_1_SFR);
 		if(able_status == 0x0)
 		{
-			for(i=0;i<4;i++)
-			{
-				target_temp = target_ARTIX[i] + 0x414;
-				write_SFR(fd, target_temp, 0x0); // rstatus to 0
-			}
 			usleep(1000);
 			continue;
-		}
-	
-				
+		}	
 	}
 }
-

@@ -50,8 +50,6 @@ void Reset_modem(int fd, off_t target);
 void rx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen);					// FFT calibration for whole FPGA board
 void tx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen, off_t target);
 void retro_continuous();
-void retro_single();
-void tx_reset();
 
 int main()
 {
@@ -156,24 +154,9 @@ int main()
 				rx_cal_bd(sock, cliaddr, addrlen);
 				break;
 
-			case 't': // tx cal bd
-				close(fd);
-				tx_cal_bd(sock, cliaddr, addrlen, target);
-				break;
-
-			case 'p': // tx reset
-				close(fd);
-				tx_reset();
-				break;
-
 			case 'c': // Continuous Retro reflective
 				close(fd);
 				retro_continuous();
-				break;
-
-			case 's': // Single Retro reflective
-				close(fd);
-				retro_single();
 				break;
 	
 			default:
@@ -317,7 +300,7 @@ void rx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen)
  	// ------------ Rx disable ------------ //
 	write_SFR(fd, target_ARTIX[0], 0x0);
 
-	for(i=0; i<9; i++){
+	for(i=0; i<12; i++){
 		sleep(1);
 		printf("slept for %d sec\n", i+1);
 	}
@@ -461,32 +444,6 @@ void tx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen, off_t target)
 	memset(cal_val,0,sizeof(cal_val));
 }
 
-void tx_reset()
-{
-	// --------- < Variables > --------- //
-	int fd = open("/dev/mem",O_RDWR|O_SYNC);	// Memory open with RD,WR & SYNC(realtime)
-	void *map_base;
-	void *virt_addr;
-	
-	off_t target_ARTIX[4] = {ARTIX_1_SFR, ARTIX_2_SFR, ARTIX_3_SFR, ARTIX_4_SFR};
-	off_t target_temp;
-	
-	int i = 0;
-	int j = 0;
-	int k = 0;
-
-	// --------- < Write reset > --------- //
-	for(j = 0; j < 4; j++)
-	{
-		target_temp = target_ARTIX[j] + 0xC0;
-		for(i=0; i<4; i++){
-			write_SFR(fd, target_temp, 0x0);
-			k ++;
-			target_temp = target_temp + 0x08;
-		}
-	}
-}
-
 void retro_continuous()
 {
 	// ---- < Variables > ---- //
@@ -538,7 +495,6 @@ void retro_continuous()
 
 			// ------------ Tx enable ------------ //
 			write_SFR(fd, target_ARTIX[0], 0x20);
-			//sleep(5); 						// sleep for 5s
 			usleep(8500); 						// sleep for 8ms
 			
 			close(fd);
@@ -554,71 +510,3 @@ void retro_continuous()
 		}
 	}
 }
-
-void retro_single()
-{
-	// ---- < Variables > ---- //
-	int fd = open("/dev/mem",O_RDWR|O_SYNC);	// Memory open with RD,WR & SYNC(realtime)
-	void *map_base;
-	void *virt_addr;
-	off_t target_ARTIX[4] = {ARTIX_1_SFR, ARTIX_2_SFR, ARTIX_3_SFR, ARTIX_4_SFR};
-	off_t target_temp = 0;
-	off_t rstatus = 0;
-	
-	int i = 0;
-
-	// ------------ Rx disable ------------ //
-	write_SFR(fd, target_ARTIX[0], 0x0);
-
-	for(i=0;i<4;i++)
-	{
-		target_temp = target_ARTIX[i] + 0x414;
-		write_SFR(fd, target_temp, 0x0); // rstatus to 0
-	}
-
-
-	// ------------ Rx enable ------------ //
-	write_SFR(fd, target_ARTIX[0], 0x10);
-
-	while(1) {
-		target_temp = target_ARTIX[0] + 0x414;
-		rstatus = read_SFR(fd, target_temp);
-
-		if(rstatus == 0)
-		{
-			printf(" No signal detected!\n");
-			close(fd);
-			fd = 0;
-			fd = open("/dev/mem",O_RDWR|O_SYNC);
-			usleep(1000);
-			continue;
-		}
-		else
-		{
-			// ------------ Rx disable ------------ //
-			write_SFR(fd, target_ARTIX[0], 0x0);
-
-			for(i=0;i<4;i++)
-			{
-				target_temp = target_ARTIX[i] + 0x414;
-				write_SFR(fd, target_temp, 0x0); // rstatus to 0
-			}
-
-			// ------------ Tx enable ------------ //
-			write_SFR(fd, target_ARTIX[0], 0x20);
-			sleep(5); 						// sleep for 5s
-			
-			close(fd);
-			fd = 0;
-			fd = open("/dev/mem",O_RDWR|O_SYNC);
-
-			// ------------ Tx disable ------------ //
-			write_SFR(fd, target_ARTIX[0], 0x0);
-
-			// ------------ Rx enable ------------ //
-			write_SFR(fd, target_ARTIX[0], 0x10);
-			usleep(1500); 						// sleep for 1.5ms
-		}
-	}
-}
-

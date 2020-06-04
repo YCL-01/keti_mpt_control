@@ -12,6 +12,7 @@ import math
 import matplotlib.pyplot as plt
 import sys
 import socket
+from time import sleep
 
 class Zynq:
 	def __init__(self, bd_num):
@@ -27,18 +28,10 @@ class Zynq:
 		for i in range(0, self.working_board):
 			self.zynq_addr_list.append((self.zynq_ip[i], self.zynq_port[i]))
 			self.zynq_sock_list.append(socket.socket(socket.AF_INET,socket.SOCK_DGRAM))
-			self.zynq_sock_list[i].setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 6000)
 
-		### Socket [NI_client -> PC_server]
-		self.pc_ip = "192.168.0.2"
-		self.ni_ip = "192.168.0.12"
-		self.ni_port = 5031
-		self.pc_addr = (self.pc_ip, self.ni_port)
-		self.ni_addr = (self.ni_ip, self.ni_port)
-		self.ni_set_data = "run"
-		self.ni_sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-		self.ni_sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1000)
-		self.ni_sock.bind(self.pc_addr)
+		for i in range(0, self.working_board):
+			self.zynq_sock_list[i].setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 6000)
+			self.zynq_sock_list[i].connect(self.zynq_addr_list[i])
 
 		### Rx cal 
 		self.Rx_Queue = []
@@ -67,7 +60,9 @@ class Zynq:
 		self.cal_check = 1
 		self.color_list = ["maroon","firebrick","red","orangered","coral","orange","gold","darkolivegreen","olive","olivedrab",
 		"limegreen","lawngreen","springgreen","cyan","steelblue","blueviolet"]
-
+		self.graph_status = ["I val before","I val after"]
+		self.title_list = ["BOARD A ","BOARD B ","BOARD C ","BOARD D "]
+		
 	## Receiving ADC memory data from ARTIX
 	def Recv_mem_data(self, socket_number):
 		for i in range(0, self.working_board):
@@ -128,54 +123,21 @@ class Zynq:
 
 	## Plot for IQ signal received for the board                                                                  
 	def show_IQ_chart(self):
-		plt.subplot(2,4,1)
-		plt.title("BOARD A I val before")
-		for i in range(0,16):
-			plt.plot(self.time, self.I_val_uncal[i], color = self.color_list[i%16], linewidth=2.0, linestyle="-", label = self.label_list[i])
-		plt.legend(loc = 4)
 
-		plt.subplot(2,4,2)
-		plt.title("BOARD B I val before")
-		for i in range(16,32):
-			plt.plot(self.time, self.I_val_uncal[i], color = self.color_list[i%16], linewidth=2.0, linestyle="-", label = self.label_list[i])
-		plt.legend(loc = 4)
-		
-		plt.subplot(2,4,3)
-		plt.title("BOARD C I val before")
-		for i in range(32,48):
-			plt.plot(self.time, self.I_val_uncal[i], color = self.color_list[i%16], linewidth=2.0, linestyle="-", label = self.label_list[i])
-		plt.legend(loc = 4)
+		for j in range(0, self.working_board):
+			plt.subplot(2,self.working_board,j+1)
+			plt.title(self.title_list[j] + self.graph_status[0])
+			for i in range(j*16,(j+1)*16):
+				plt.plot(self.time, self.I_val_uncal[i], color = self.color_list[i%16], linewidth=2.0, linestyle="-", label = self.label_list[i])
+			plt.legend(loc = 4)
 
-		plt.subplot(2,4,4)
-		plt.title("BOARD C I val before")
-		for i in range(48,64):
-			plt.plot(self.time, self.I_val_uncal[i], color = self.color_list[i%16], linewidth=2.0, linestyle="-", label = self.label_list[i])
-		plt.legend(loc = 4)
-		
-		plt.subplot(2,4,5)
-		plt.title("BOARD A I val after")
-		for i in range(0,16):
-			plt.plot(self.time, self.I_val_cal[i], color = self.color_list[i%16], linewidth=2.0, linestyle="-", label = self.label_list[i])
-		plt.legend(loc = 4)
+		for j in range(0, self.working_board):
+			plt.subplot(2,self.working_board,self.working_board + j + 1)
+			plt.title(self.title_list[j] + self.graph_status[1])
+			for i in range(j*16,(j+1)*16):
+				plt.plot(self.time, self.I_val_cal[i], color = self.color_list[i%16], linewidth=2.0, linestyle="-", label = self.label_list[i])
+			plt.legend(loc = 4)
 
-		plt.subplot(2,4,6)
-		plt.title("BOARD B I val after")
-		for i in range(16,32):
-			plt.plot(self.time, self.I_val_cal[i], color = self.color_list[i%16], linewidth=2.0, linestyle="-", label = self.label_list[i])
-		plt.legend(loc = 4)
-		
-		plt.subplot(2,4,7)
-		plt.title("BOARD C I val after")
-		for i in range(32,48):
-			plt.plot(self.time, self.I_val_cal[i], color = self.color_list[i%16], linewidth=2.0, linestyle="-", label = self.label_list[i])
-		plt.legend(loc = 4)
-
-		plt.subplot(2,4,8)
-		plt.title("BOARD C I val after")
-		for i in range(48,64):
-			plt.plot(self.time, self.I_val_cal[i], color = self.color_list[i%16], linewidth=2.0, linestyle="-", label = self.label_list[i])
-		plt.legend(loc = 4)
-		
 		plt.show()
 
 	## RX calibraiton function
@@ -212,10 +174,8 @@ class Zynq:
 					sin_val = int(Y*(2048))
 				send_buff_sin = send_buff_sin + " " + hex(sin_val)
 
-				output = output + "ANT " + str(j*16 + i) + "	"
+				output = output + "ANT " + str(j*16 + i-1) + "	"
 				output = output + "degree:	" + str(self.get_angle_data((j*16) + (i-1))) + "  " + str(self.get_angle_data((j*16) + (i-1)) - self.get_angle_data(0)) + " \n"
-				#output = output + " \n phase 		: " + str(max_phase)
-				#output = output + " \n index		: " + str(self.get_max_abs_idx(0)) + "\n===========\n"
 				
 				sin_val = ""
 				cos_val = ""
@@ -224,6 +184,7 @@ class Zynq:
 					send_buff_2 = send_buff_2 + send_buff_cos + send_buff_sin
 					send_buff_cos = ""
 					send_buff_sin = ""
+					output = output + "\n"
 
 			print(send_buff_2)
 			self.zynq_sock_list[j].sendto(send_buff_2.encode(),self.zynq_addr_list[j])
@@ -245,8 +206,9 @@ class Zynq:
 			for i in range(0, 16):
 				output2 = output2 + "ANT " + str(j*16 + i) + "	"
 				output2 = output2 + "degree:	" + str(self.get_angle_data((j*16) + i)) + "  " + str(self.get_angle_data((j*16) + i) - self.get_angle_data(0)) +" \n"
-				#output2 = output2 + " \n phase 		: " + str(self.get_max_phase_val((j*16) + i))
-				#output2 = output2 + " \n index		: " + str(self.get_max_abs_idx(0)) + "\n===========\n"
+
+				if((i+1)%4 == 0):
+					output2 = output2 + "\n"
 
 		self.show_IQ_chart()
 
@@ -288,52 +250,6 @@ class Zynq:
 		#	print("ANT under zero: ", ANT_NUM, "\n")
 			value = value + 2*np.pi		
 		return value
-	
-	## Tx reset sweep init to 0x0
-	def Tx_reset(self, command, address, value):
-		send_buff_1 = command + address + self.flag + value
-		for i in range(0, self.working_board):
-			self.zynq_sock_list[i].sendto(send_buff_1.encode(),self.zynq_addr_list[i])
-
-	## TX calibration
-	def Tx_cal(self, command, address, value):
-		degree_list = []
-		send_buff_1 = command + address + self.flag + value
-		for i in range(0 , self.working_board):
-			self.zynq_sock_list[i].sendto(send_buff_1.encode(),self.zynq_addr_list[i])
-
-		self.ni_sock.sendto(self.ni_set_data.encode(), self.ni_addr)
-		print("wating...\n")
-		recv_data, recv_addr = self.ni_sock.recvfrom(1000)
-		recv_data = recv_data.decode()
-
-		data = "check 0x0"
-		degree_data_var = 0
-
-		for i in range(0, self.working_board):
-			if(i == 0):
-				for j in range(0, 15):
-					degree_data_var = 360 - float(recv_data.split(' ').pop(j))
-					print("ANT_", (i*16) +  j+1, ": ", degree_data_var, "\n")
-					degree_data_var = int(degree_data_var/6.1111)
-					degree_data_var = hex(degree_data_var)
-					data = data + " " + degree_data_var
-					degree_data_var = 0
-			else:
-				for j in range(15, 31):
-					degree_data_var = 360 - float(recv_data.split(' ').pop(j))
-					print("ANT_", j+1, ": ", degree_data_var, "\n")
-					degree_data_var = int(degree_data_var/6.1111)
-					degree_data_var = hex(degree_data_var)
-					data = data + " " + degree_data_var
-					degree_data_var = 0
-
-			self.zynq_sock_list[i].sendto(data.encode(),self.zynq_addr_list[i])
-			data = "check"
-
-		self.ni_sock.sendto(self.ni_set_data.encode(), self.ni_addr)
-		recv_data, recv_addr = self.ni_sock.recvfrom(1000)
-		print(recv_data.decode())
 
 	##TX OR RX ENABLE / DISABLE 
 	def EnDis_write(self, command, address, value, bd):

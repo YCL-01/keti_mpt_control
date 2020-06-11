@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import pyqtSlot, pyqtSignal,  QThread, QTimer
 from PyQt5 import uic
 from Zynq_wrapper import Zynq
-from NI_udp import NI
 import sys
 import socket
 

@@ -47,62 +47,64 @@
 unsigned long read_SFR(int fd, off_t target);
 void write_SFR(int fd, off_t target, unsigned long value);
 void Reset_modem(int fd, off_t target);
-void rx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen);					// FFT calibration for whole FPGA board
+// FFT calibration for whole FPGA board
+void rx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen);					
 void tx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen, off_t target);
 void retro_continuous();
 
 int main()
 {
 	// --------------------- < socket > --------------------- //
+	// Zynq, PC
+	struct sockaddr_in servaddr, cliaddr;           
+    	// socket
+	int sock;
+	int addrlen = sizeof(struct sockaddr);
 
-	struct sockaddr_in servaddr, cliaddr;           // Zynq, PC
+	if((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) 
+	{
+	perror("socket fail");
+	exit(0);
+	} // UDP connect error
 
-    int sock;										// socket
-    int addrlen = sizeof(struct sockaddr);
-
-    if((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) 
-    {
-        perror("socket fail");
-        exit(0);
-    } // UDP connect error
-
- 	// server structure
-    memset(&cliaddr, 0, addrlen); 
-    memset(&servaddr, 0, addrlen); 
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(port); //access
-    if(bind(sock,(struct sockaddr *)&servaddr, addrlen) < 0) 
-    {
-        perror("bind fail");
-        exit(0);
-    }
-
-    // --------------------- < memory access > -------------------- //
-
-    char recv_buf[MAXLINE+1];                            			// Command From PC
-    char send_buf[MAXLINE+1];										// result to PC
-
-	int fd = open("/dev/mem",O_RDWR|O_SYNC);						// Memory open with RD,WR & SYNC(realtime)
-	void *map_base;
-	void *virt_addr;												// For mmap function
-
-	char *cmd;														// command
-	char *target_data;												// designated target
-	char *value_data;												// designated value
+	// server structure
+	memset(&cliaddr, 0, addrlen); 
+	memset(&servaddr, 0, addrlen); 
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	servaddr.sin_port = htons(port); //access
 	
-	off_t target;													// memory address	
-	unsigned long value;											// input data to SFR
-	unsigned long result;											// output data from SFR
+	if(bind(sock,(struct sockaddr *)&servaddr, addrlen) < 0) {
+		perror("bind fail");
+		exit(0);
+	}
+
+	
+	// --------------------- < memory access > -------------------- //
+	
+	char recv_buf[MAXLINE+1]; // Recieving buffer from Host                         			
+	char send_buf[MAXLINE+1]; // Sending Buffer to Host
+
+	int fd = open("/dev/mem",O_RDWR|O_SYNC); // Memory open with RD,WR & SYNC(realtime)
+	
+	// Void type variables for Mem address
+	void *map_base;
+	void *virt_addr;
+	
+	char *cmd; // command
+	char *target_data; // designated target
+	char *value_data;  // designated value
+
+	off_t target; // memory address	
+	unsigned long value;  // input data to SFR
+	unsigned long result; // output data from SFR
 
 	int i = 0;
 
-
-	// -------------------- < Execution part > -------------------- // 
-
+	// -------------------- < Execution part > -------------------- //
 	while(1)
 	{
-		// reset buffer and reset file descriptor
+		// reset buffer and file descriptor
 		cmd = NULL;
 		memset(recv_buf,0,sizeof(recv_buf));
 		memset(send_buf,0,sizeof(send_buf));
@@ -114,14 +116,14 @@ int main()
 		recvfrom(sock, recv_buf, MAXLINE, 0, (struct sockaddr *)&cliaddr, &addrlen);
 
 		// Tokenize command
-		cmd = strtok(recv_buf, " ");					// command
-		target_data = strtok(NULL, " ");				// target
-		value_data = strtok(NULL, " ");					// input value
-		target = strtoul(target_data, 0, 0);			//string to unsigned long
+		cmd = strtok(recv_buf, " ");		// command
+		target_data = strtok(NULL, " ");	// target
+		value_data = strtok(NULL, " ");		// input value
+		target = strtoul(target_data, 0, 0);	// string to unsigned long
 		value = strtoul(value_data, 0, 0);
+		
 		printf(" - command: %c\n - target: %s\n - value: %s \n", cmd[0], target_data, value_data);
 		
-		//switch case for function select by command
 		switch(cmd[0])
 		{
 			case 'r': // read SFR
@@ -191,7 +193,7 @@ void write_SFR(int fd, off_t target, unsigned long value)
 void rx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen)
 {
 	// --------- < Variables > --------- //
-	int fd = open("/dev/mem",O_RDWR|O_SYNC);	// Memory open with RD,WR & SYNC(realtime)
+	int fd = open("/dev/mem",O_RDWR|O_SYNC);
 	void *map_base;
 	void *virt_addr;
 	
@@ -201,14 +203,14 @@ void rx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen)
 	off_t mem_target_temp;
 	
 	char *trash = {0};
-	char mem_data[3000] = {0};								// ADC memory
-	char recv_buf[MAXLINE] = {0};							// Cal data
-	char buf_rx_e_value[MAXLINE] = {0};						// Estimated data
-	char *cal_data = {0};									// FFT calibrated data	
+	char mem_data[3000] = {0};		// ADC memory
+	char recv_buf[MAXLINE] = {0};		// Cal data
+	char buf_rx_e_value[MAXLINE] = {0};	// Estimated data
+	char *cal_data = {0};			// FFT calibrated data	
 
-	unsigned long cal_val[32] = {0};						// rx_calibration value from PC
-	unsigned long rstatus = 0;							 	// rstatus for calculation confirm
-	unsigned long output;									// output for read_SFR()
+	unsigned long cal_val[32] = {0};	// rx_calibration value from PC
+	unsigned long rstatus = 0;		// rstatus for calculation confirm
+	unsigned long output;			// output for read_SFR()
 
 	int i = 0;
 	int j = 0;
@@ -220,7 +222,8 @@ void rx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen)
 	}
 
 	// ------------ Rx disable ------------ //
-	write_SFR(fd, target_ARTIX[0], 0x0);							// global rx disable
+	// global rx disable
+	write_SFR(fd, target_ARTIX[0], 0x0);
 	printf("rx disabled\n");
 	sleep(1);
 
@@ -237,29 +240,27 @@ void rx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen)
 	write_SFR(fd, target_temp, RX_REF_B);
 
 	// ------------ Rx enable ------------ //
-	write_SFR(fd, target_ARTIX[0], 0x10);							// global rx enable
+	// global rx enable
+	write_SFR(fd, target_ARTIX[0], 0x10);
 	printf("rx enabled\n");
 	sleep(1);
 
 	// ------------ Memory dump ------------ //
 	while(1) 
 	{					
-	// check rstatus for rx cal
-
+		// check rstatus for rx cal
 		target_temp = target_ARTIX[0] + 0x414;
 		rstatus = read_SFR(fd, target_temp);
 		printf("rstatus : %lx\n",rstatus);
 
-		if(rstatus == 0 )
-		{
+		if(rstatus == 0 ){
 			usleep(1000);
 			close(fd);
 			fd = 0;
 			fd = open("/dev/mem",O_RDWR|O_SYNC);
 			continue;
 		}
-		else 
-		{
+		else{
 			for(k = 0; k < 4; k++)																			// 4 ARTIX
 			{
 				mem_target_temp = mem_target_ARTIX[k];
@@ -405,7 +406,7 @@ void rx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen)
 void tx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen, off_t target)
 {
 	// --------- < Variables > --------- //
-	int fd = open("/dev/mem",O_RDWR|O_SYNC);	// Memory open with RD,WR & SYNC(realtime)
+	int fd = open("/dev/mem",O_RDWR|O_SYNC);
 	void *map_base;
 	void *virt_addr;
 	
@@ -413,9 +414,9 @@ void tx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen, off_t target)
 	off_t target_temp;
 	
 	char *trash = {0};
-	char recv_buf[MAXLINE] = {0};							// Cal data
-	char *cal_data = {0};									// FFT calibrated data
-	unsigned long cal_val[16] = {0};						// rx_calibration value from PC
+	char recv_buf[MAXLINE] = {0};		// Cal data
+	char *cal_data = {0};			// FFT calibrated data
+	unsigned long cal_val[16] = {0};	// rx_calibration value from PC
 
 	int i = 0;
 	int j = 0;
@@ -447,7 +448,7 @@ void tx_cal_bd(int sock, struct sockaddr_in cliaddr, int addrlen, off_t target)
 void retro_continuous()
 {
 	// ---- < Variables > ---- //
-	int fd = open("/dev/mem",O_RDWR|O_SYNC);	// Memory open with RD,WR & SYNC(realtime)
+	int fd = open("/dev/mem",O_RDWR|O_SYNC);
 	void *map_base;
 	void *virt_addr;
 	off_t target_ARTIX[4] = {ARTIX_1_SFR, ARTIX_2_SFR, ARTIX_3_SFR, ARTIX_4_SFR};
